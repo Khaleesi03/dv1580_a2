@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <pthread.h>
-#include <sys/mman.h>  // Include mmap headers
+#include <sys/mman.h>
 #include "memory_manager.h"
 
 static void *memory_pool;  // Pointer to the memory pool
@@ -21,7 +21,7 @@ void mem_init(size_t size)
 
     memory_pool = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0); // Use mmap for allocation
     if (memory_pool == MAP_FAILED) {
-        printf("Memory allocation failed.\n");
+        perror("Memory allocation failed");
         exit(EXIT_FAILURE);  // Exit if allocation failed
     }
 
@@ -30,12 +30,11 @@ void mem_init(size_t size)
 }
 
 // Allocation function
-// This function allocates a block of memory of the specified size
 void* mem_alloc(size_t size)
 {
     pthread_mutex_lock(&mem_lock);  // Lock for thread safety
 
-    if (size + sizeof(size_t) > pool_size) {
+    if (size == 0 || size + sizeof(size_t) > pool_size) {
         pthread_mutex_unlock(&mem_lock);  // Unlock before returning
         return NULL;  // Not enough space in the pool
     }
@@ -47,7 +46,7 @@ void* mem_alloc(size_t size)
         size_t block_size = *(size_t*)current_block;  // Get the block size
 
         // Check if the block is free (block size is 0)
-        if (block_size == 0) { 
+        if (block_size == 0) {
             // Check if the remaining space is sufficient for the new block
             if (pool_size - ((char*)current_block - (char*)memory_pool) >= size + sizeof(size_t)) {
                 // Mark block as allocated
@@ -65,7 +64,6 @@ void* mem_alloc(size_t size)
 }
 
 // Deallocation function
-// Frees a block of memory, marking it as unavailable
 void mem_free(void* block)
 {
     if (block == NULL) {
@@ -82,7 +80,6 @@ void mem_free(void* block)
 }
 
 // Resize function
-// Resizes an allocated block to the new size, returning the new block
 void* mem_resize(void* block, size_t new_size)
 {
     if (block == NULL) {
@@ -111,9 +108,10 @@ void* mem_resize(void* block, size_t new_size)
 }
 
 // Deinitialization function
-// Cleans up the memory pool (optional if needed)
 void mem_deinit()
 {
-    munmap(memory_pool, pool_size);  // Use munmap to free the allocated memory
-    memory_pool = NULL;
+    if (memory_pool != NULL) {
+        munmap(memory_pool, pool_size);  // Use munmap to free the allocated memory
+        memory_pool = NULL;
+    }
 }
