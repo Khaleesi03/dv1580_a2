@@ -27,34 +27,35 @@ void mem_init(size_t size)
     memset(memory_pool, 0, pool_size);
 }
 
-// Allocation function
 void* mem_alloc(size_t size)
 {
     pthread_mutex_lock(&mem_lock);  // Lock for thread safety
 
-    if (size == 0 || size + sizeof(size_t) > pool_size) {
+    if (size + sizeof(size_t) > pool_size) {
         pthread_mutex_unlock(&mem_lock);  // Unlock before returning
         return NULL;  // Not enough space in the pool
     }
 
     void* current_block = memory_pool;  // Start at the beginning of the pool
+    size_t remaining_size = pool_size;   // Track remaining size
 
     // Traverse through the pool to find a free block
     while ((char*)current_block < (char*)memory_pool + pool_size) {
         size_t block_size = *(size_t*)current_block;  // Get the block size
 
         // Check if the block is free (block size is 0)
-        if (block_size == 0) {
+        if (block_size == 0) { 
             // Check if the remaining space is sufficient for the new block
-            if (pool_size - ((char*)current_block - (char*)memory_pool) >= size + sizeof(size_t)) {
+            if (remaining_size >= size + sizeof(size_t)) {
                 // Mark block as allocated
-                *(size_t*)current_block = size; // Store size before the block
+                *(size_t*)current_block = size;
                 pthread_mutex_unlock(&mem_lock);  // Unlock after allocation
                 return (char*)current_block + sizeof(size_t);  // Return memory after size field
             }
         }
 
         // Move to the next block in the pool
+        remaining_size -= (block_size + sizeof(size_t));
         current_block = (char*)current_block + block_size + sizeof(size_t);
     }
 
