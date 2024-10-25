@@ -11,22 +11,20 @@ static size_t pool_size;   // Total size of the memory pool
 static pthread_mutex_t mem_lock = PTHREAD_MUTEX_INITIALIZER;  // Mutex for thread safety
 
 // Initialization function
-// This function sets up the memory pool of the specified size
 void mem_init(size_t size)
 {
-    // Ensure that the size is at least 5000 bytes
     if (size < 5000) {
-        size = 5000;
+        size = 5000; // Allocate at least 5000 bytes
     }
 
-    memory_pool = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0); // Use mmap for allocation
+    memory_pool = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (memory_pool == MAP_FAILED) {
         perror("Memory allocation failed");
-        exit(EXIT_FAILURE);  // Exit if allocation failed
+        exit(EXIT_FAILURE);
     }
 
-    pool_size = size;  // Set the total size of the pool
-    memset(memory_pool, 0, pool_size);  // Initialize memory to zero
+    pool_size = size;
+    memset(memory_pool, 0, pool_size);
 }
 
 // Allocation function
@@ -50,11 +48,12 @@ void* mem_alloc(size_t size)
             // Check if the remaining space is sufficient for the new block
             if (pool_size - ((char*)current_block - (char*)memory_pool) >= size + sizeof(size_t)) {
                 // Mark block as allocated
-                *(size_t*)current_block = size;
+                *(size_t*)current_block = size; // Store size before the block
                 pthread_mutex_unlock(&mem_lock);  // Unlock after allocation
                 return (char*)current_block + sizeof(size_t);  // Return memory after size field
             }
         }
+
         // Move to the next block in the pool
         current_block = (char*)current_block + block_size + sizeof(size_t);
     }
@@ -83,7 +82,7 @@ void mem_free(void* block)
 void* mem_resize(void* block, size_t new_size)
 {
     if (block == NULL) {
-        return NULL;  // Return null if no block to resize
+        return mem_alloc(new_size);  // Allocate new if block is NULL
     }
 
     pthread_mutex_lock(&mem_lock);  // Lock for thread safety
