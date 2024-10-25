@@ -13,6 +13,11 @@ static pthread_mutex_t mem_lock = PTHREAD_MUTEX_INITIALIZER;  // Mutex for threa
 // This function sets up the memory pool of the specified size
 void mem_init(size_t size)
 {
+    // Ensure that the size is at least 5000 bytes
+    if (size < 5000) {
+        size = 5000;
+    }
+
     memory_pool = malloc(size);  // Allocate the memory pool
     if (!memory_pool) {
         printf("Memory allocation failed.\n");
