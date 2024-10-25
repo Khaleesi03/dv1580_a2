@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <sys/mman.h>  // Include mmap headers
 #include "memory_manager.h"
 
 static void *memory_pool;  // Pointer to the memory pool
@@ -18,8 +19,8 @@ void mem_init(size_t size)
         size = 5000;
     }
 
-    memory_pool = malloc(size);  // Allocate the memory pool
-    if (!memory_pool) {
+    memory_pool = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0); // Use mmap for allocation
+    if (memory_pool == MAP_FAILED) {
         printf("Memory allocation failed.\n");
         exit(EXIT_FAILURE);  // Exit if allocation failed
     }
@@ -113,6 +114,6 @@ void* mem_resize(void* block, size_t new_size)
 // Cleans up the memory pool (optional if needed)
 void mem_deinit()
 {
-    free(memory_pool);
+    munmap(memory_pool, pool_size);  // Use munmap to free the allocated memory
     memory_pool = NULL;
 }
