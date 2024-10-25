@@ -13,31 +13,29 @@ static pthread_mutex_t mem_lock = PTHREAD_MUTEX_INITIALIZER;  // Mutex for threa
 // Initialization function
 void mem_init(size_t size)
 {
-    if (size < 5000) {
-        size = 5000; // Allocate at least 5000 bytes
-    }
-
+    // Use mmap instead of malloc
     memory_pool = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    
     if (memory_pool == MAP_FAILED) {
         perror("Memory allocation failed");
-        exit(EXIT_FAILURE);
+        exit(EXIT_FAILURE);  // Exit if allocation failed
     }
 
-    pool_size = size;
-    memset(memory_pool, 0, pool_size);
+    pool_size = size;  // Set the total size of the pool
+    memset(memory_pool, 0, pool_size);  // Initialize memory to zero
 }
 
 void* mem_alloc(size_t size)
 {
     pthread_mutex_lock(&mem_lock);  // Lock for thread safety
 
-    if (size + sizeof(size_t) > pool_size) {
-        pthread_mutex_unlock(&mem_lock);  // Unlock before returning
-        return NULL;  // Not enough space in the pool
+    // Ensure that size is not zero
+    if (size == 0 || size + sizeof(size_t) > pool_size) {
+        pthread_mutex_unlock(&mem_lock);
+        return NULL;  // Not enough space in the pool or zero size
     }
 
     void* current_block = memory_pool;  // Start at the beginning of the pool
-    size_t remaining_size = pool_size;   // Track remaining size
 
     // Traverse through the pool to find a free block
     while ((char*)current_block < (char*)memory_pool + pool_size) {
@@ -46,22 +44,22 @@ void* mem_alloc(size_t size)
         // Check if the block is free (block size is 0)
         if (block_size == 0) { 
             // Check if the remaining space is sufficient for the new block
-            if (remaining_size >= size + sizeof(size_t)) {
+            if (pool_size - ((char*)current_block - (char*)memory_pool) >= size + sizeof(size_t)) {
                 // Mark block as allocated
-                *(size_t*)current_block = size;
+                *(size_t*)current_block = size;  // Set the size of the allocated block
                 pthread_mutex_unlock(&mem_lock);  // Unlock after allocation
                 return (char*)current_block + sizeof(size_t);  // Return memory after size field
             }
         }
 
         // Move to the next block in the pool
-        remaining_size -= (block_size + sizeof(size_t));
         current_block = (char*)current_block + block_size + sizeof(size_t);
     }
 
     pthread_mutex_unlock(&mem_lock);  // Unlock if no free block found
     return NULL;  // No free block found
 }
+
 
 // Deallocation function
 void mem_free(void* block)
