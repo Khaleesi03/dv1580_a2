@@ -20,11 +20,12 @@ TEST_LINKED_LIST_OBJ = $(TEST_LINKED_LIST_SRC:.c=.o)
 LIBRARY = libmemory_manager.so
 EXECUTABLE = linked_list_app
 TEST_EXECUTABLE = test_linked_list
+TEST_MEMORY_EXECUTABLE = test_memory_manager
 
 .PHONY: all clean mmanager list test
 
 # Default target to build everything
-all: mmanager list test
+all: mmanager list test_memory_manager
 
 # Build the memory manager library
 mmanager: $(MEMORY_MANAGER_OBJ)
@@ -35,8 +36,12 @@ list: $(LINKED_LIST_OBJ) $(TEST_LINKED_LIST_OBJ)
 	$(CC) -o $(EXECUTABLE) $(LINKED_LIST_OBJ) $(TEST_LINKED_LIST_OBJ) -L. -lmemory_manager $(LDFLAGS)
 
 # Build the test linked list application
-test: $(LINKED_LIST_OBJ) $(TEST_LINKED_LIST_OBJ)
+test: $(TEST_LINKED_LIST_OBJ) $(LINKED_LIST_OBJ)
 	$(CC) -o $(TEST_EXECUTABLE) $(TEST_LINKED_LIST_OBJ) $(LINKED_LIST_OBJ) -L. -lmemory_manager $(LDFLAGS)
+
+# Build the test memory manager application
+test_memory_manager: $(TEST_MEMORY_MANAGER_OBJ) $(MEMORY_MANAGER_OBJ)
+	$(CC) -o $(TEST_MEMORY_EXECUTABLE) $(TEST_MEMORY_MANAGER_OBJ) $(MEMORY_MANAGER_OBJ) -L. -lmemory_manager $(LDFLAGS)
 
 # Compile the object files
 %.o: %.c
@@ -44,4 +49,4 @@ test: $(LINKED_LIST_OBJ) $(TEST_LINKED_LIST_OBJ)
 
 # Clean up generated files
 clean:
-	rm -f $(MEMORY_MANAGER_OBJ) $(LINKED_LIST_OBJ) $(TEST_MEMORY_MANAGER_OBJ) $(TEST_LINKED_LIST_OBJ) $(EXECUTABLE) $(TEST_EXECUTABLE) $(LIBRARY)
+	rm -f $(MEMORY_MANAGER_OBJ) $(LINKED_LIST_OBJ) $(TEST_MEMORY_MANAGER_OBJ) $(TEST_LINKED_LIST_OBJ) $(EXECUTABLE) $(TEST_EXECUTABLE) $(TEST_MEMORY_EXECUTABLE) $(LIBRARY)
